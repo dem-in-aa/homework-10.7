@@ -15,6 +15,37 @@
 
 Далее установите на созданные виртуальные машины пакет Nginx любым удобным способом и запустите Nginx веб-сервер на порту 80.
 
+```yaml
+
+---
+- hosts: 158.160.24.7 158.160.17.28
+  remote_user: user
+  become: yes
+  become_method: sudo
+  gather_facts: no
+  tasks:
+
+    - name: Install Nginx
+      apt: name=nginx update_cache=yes state=latest
+
+    - service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: checking service status
+      command: systemctl status "{{ item }}"
+      with_items:
+        - nginx
+      register: result
+      ignore_errors: yes
+
+    - name: showing report
+      debug:
+        var: result
+```
+
+
 Далее перейдите в веб-консоль Yandex Cloud и убедитесь, что: 
 
 - созданный балансировщик находится в статусе Active,
