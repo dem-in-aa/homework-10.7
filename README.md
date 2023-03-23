@@ -185,6 +185,81 @@ output "external-vm-2" {
 ![](img/1-6.png)
 ---
 
+Для решения задачи по перенаправлению трафика с порта 80 на порт 8088 и смены location "/" на "/ping" внесены правки в плейбуке terraform:
+
+```
+
+ attached_target_group {
+    target_group_id =  yandex_lb_target_group.target-1.id
+    healthcheck {
+      name = "http"
+        http_options {
+          port = 8088
+          path = "/ping"
+        }
+    }
+  }
+}
+
+```
+
+а также в ansible-playbook:
+
+```
+---
+- hosts: 158.160.11.75 158.160.3.119
+  remote_user: user
+  become: yes
+  become_method: sudo
+  gather_facts: no
+  tasks:
+    - name: Install Nginx
+      apt: name=nginx update_cache=yes state=latest
+
+    - service:
+        name: nginx
+        state: started
+        enabled: yes
+
+    - name: checking service status
+      command: systemctl status "{{ item }}"
+      with_items:
+        - nginx
+      register: result
+      ignore_errors: yes
+
+    - name: showing report
+      debug:
+        var: result
+
+    - name: Copy the nginx.conf
+      ansible.builtin.copy:
+        src:  /etc/nginx/nginx.conf
+        dest: /etc/nginx/nginx.conf
+        owner: user
+        group: user
+        mode: '0644'
+        backup: yes
+      register: restart_nginx
+
+    - name: Copy file One to sites-enabled
+      ansible.builtin.copy:
+        src: /etc/nginx/sites-enabled/one
+        dest: /etc/nginx/sites-enabled/one
+        owner: user
+        group: user
+        mode: '0644'
+        backup: yes
+      register: restart_nginx
+
+    - name: restart nginx
+      service:
+        name: nginx
+        state: restarted
+
+```
+
+---
 ## Задание 2*
 
 Теперь, вместо создания виртуальных машин, создайте [группу виртуальных машин с балансировщиком нагрузки](https://cloud.yandex.ru/docs/compute/operations/instance-groups/create-with-balancer).
